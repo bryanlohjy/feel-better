@@ -87,7 +87,7 @@ if __name__ == "__main__":
     # TODO: cmd line args for query, pages, image size
 
     # fetch data from pexels
-    results = search({"query": "smile", "per_page": 80})
+    results = search({"query": "happy portrait face", "per_page": 80})
     photos = [photo for photo in results["photos"]]
 
     # detect face locations
