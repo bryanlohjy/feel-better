@@ -5,7 +5,7 @@ import useInterval from '../../../utils/hooks/useInterval';
 
 const CANVAS_WIDTH = 500;
 const CANVAS_HEIGHT = 500;
-const MS_PER_ITERATION = 100;
+const MS_PER_ITERATION = 80;
 
 const IteratorCanvas: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -77,37 +77,45 @@ const itemsToDraw: DrawableItem[] = [
 const FOCAL_POINT_BOX = {
   norm_x: 0.5,
   norm_y: 0.5,
-  // norm_width: 0.3,
+  norm_width: 0.3,
   // norm_height: 0.3,
 };
 
 const drawItem = (ctx: CanvasRenderingContext2D, item: DrawableItem) => {
   const { image, face_box } = item;
   const canvas = ctx.canvas;
-  const width = image.naturalWidth;
-  const height = image.naturalHeight;
+  // scale image such that all face boxes are the same width
+  const targetBoxWidth = FOCAL_POINT_BOX.norm_width * canvas.width;
+  const faceBoxWidth = image.naturalWidth * face_box.norm_width;
+  const scaleFactor =  targetBoxWidth / faceBoxWidth;
+
+  const imgWidth = image.naturalWidth * scaleFactor;
+  const imgHeight = image.naturalHeight * scaleFactor;
 
   const drawableCenter = {
-    x: width * (face_box.norm_width / 2 + face_box.norm_x),
-    y: height * (face_box.norm_height / 2 + face_box.norm_y)
+    x: imgWidth * (face_box.norm_width / 2 + face_box.norm_x),
+    y: imgHeight * (face_box.norm_height / 2 + face_box.norm_y)
   };
+
   const targetCoordCanvas = {
     x: FOCAL_POINT_BOX.norm_x * canvas.width,
     y: FOCAL_POINT_BOX.norm_y * canvas.height,
   }
   const x = targetCoordCanvas.x - drawableCenter.x;
   const y = targetCoordCanvas.y - drawableCenter.y;
-  ctx.drawImage(image, x, y, width, height);
-
-  // draw face_box
+  
+  ctx.drawImage(image, x, y, imgWidth, imgHeight);
   ctx.lineWidth = 4;
   ctx.strokeStyle = 'red';
-  ctx.strokeRect(
-    x + width * face_box.norm_x,
-    y + height * face_box.norm_y,
-    width * face_box.norm_width,
-    height * face_box.norm_height,
-  )
+  
+  // // draw face_box
+  // const faceBox = {
+  //   x: x + imgWidth * face_box.norm_x,
+  //   y: y + imgHeight * face_box.norm_y,
+  //   width: imgWidth * face_box.norm_width,
+  //   height: imgHeight * face_box.norm_height,
+  // }
+  // ctx.strokeRect(faceBox.x, faceBox.y, faceBox.width, faceBox.height);
 }
 
 const drawCanvas = (ctx: CanvasRenderingContext2D, frameCount: number) => {
