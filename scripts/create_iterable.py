@@ -4,7 +4,7 @@ import numpy
 import requests
 from io import BytesIO
 from pexels import search
-from typing import Tuple
+from typing import Tuple, Union, Literal, List
 import json
 import argparse
 from tqdm import tqdm
@@ -95,6 +95,47 @@ def visualize_item(path, iterable):
     img.save(path)
 
 
+Landmark = Union[
+    Literal["chin"],
+    Literal["left_eyebrow"],
+    Literal["right_eyebrow"],
+    Literal["nose_bridge"],
+    Literal["nose_tip"],
+    Literal["left_eye"],
+    Literal["right_eye"],
+    Literal["top_lip"],
+    Literal["bottom_lip"],
+]
+
+
+def get_vector_from_landmarks(item, landmarks: List[Landmark]):
+    vector = numpy.array([])
+    for landmark_key in landmarks:
+        landmark_coords = numpy.array(item["landmarks"]["norm"][landmark_key]).flatten()
+        vector = numpy.concatenate([vector, landmark_coords])
+    return vector.tolist()
+
+
+def get_distance_between_vectors(a: List[float], b: List[float]):
+    dist = numpy.linalg.norm(numpy.array(a) - numpy.array(b))
+    return dist
+
+
+def sort_iterable_by_landmarks(iterable, landmarks):
+    base_vector = get_vector_from_landmarks(iterable[0], landmarks)
+    sortables = [
+        {
+            "item": item,
+            "dist_from_base": get_distance_between_vectors(
+                base_vector, get_vector_from_landmarks(item, landmarks)
+            ),
+        }
+        for item in iterable
+    ]
+    sorted_iterable = sorted(sortables, key=lambda x: x["dist_from_base"])
+    return [item["item"] for item in sorted_iterable]
+
+
 def write_json(path: str, dict):
     json_object = json.dumps(dict, indent=2)
 
@@ -118,6 +159,13 @@ if __name__ == "__main__":
         type=int,
     )
     parser.add_argument(
+        "-s",
+        "--sort_by_landmarks",
+        help="List of landmarks to sort by",
+        nargs="+",
+        default=[],
+    )
+    parser.add_argument(
         "-o",
         "--output_path",
         help="Output path",
@@ -127,7 +175,7 @@ if __name__ == "__main__":
         "-d", "--debug", help="Output path", default=False, type=lambda v: bool(v)
     )
 
-    # Read arguments from command line
+    # # Read arguments from command line
     args = parser.parse_args()
 
     # fetch data from pexels
@@ -141,6 +189,9 @@ if __name__ == "__main__":
         item = photo_to_iterable_item(photo)
         if item["face_box"]:
             iterable.append(item)
+
+    if args.sort_by_landmarks:
+        iterable = sort_iterable_by_landmarks(iterable, args.sort_by_landmarks)
 
     # output
     write_json(args.output_path, {"iterable": iterable})
