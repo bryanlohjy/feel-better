@@ -68,8 +68,8 @@ def photo_to_iterable_item(photo):
         "src": src,
         "avg_color": photo["avg_color"],
         "description": photo["alt"],
-        "face_box": face.get("face_box", None),
-        "landmarks": face.get("landmarks", None),
+        "face_box": face.get("face_box", None) if face else [],
+        "landmarks": face.get("landmarks", None) if face else [],
     }
 
 
