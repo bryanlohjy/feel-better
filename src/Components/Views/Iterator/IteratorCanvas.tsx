@@ -1,7 +1,7 @@
 import { mean } from 'lodash';
 import React, { useCallback, useEffect, useRef } from 'react';
 import styled from "styled-components";
-import ITERABLE from '../../../iterables/iterable.json';
+import ITERABLE from '../../../iterables/iterable_lip_sort.json';
 import useInterval from '../../../utils/hooks/useInterval';
 
 const CANVAS_WIDTH = 500;
@@ -145,7 +145,7 @@ const drawItem = (ctx: CanvasRenderingContext2D, item: DrawableItem) => {
   const imgWidth = image.naturalWidth * scaleFactor;
   const imgHeight = image.naturalHeight * scaleFactor;
 
-  const drawableCenterNorm = getDrawableCenterNorm(item, ['left_eye', 'right_eye'])
+  const drawableCenterNorm = getDrawableCenterNorm(item, ['top_lip', 'bottom_lip']);//, 'right_eye'])
   const drawableCenter = {
     x: imgWidth * drawableCenterNorm.x,
     y: imgHeight * drawableCenterNorm.y
