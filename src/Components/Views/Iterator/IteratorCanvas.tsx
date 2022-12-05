@@ -1,3 +1,4 @@
+import { mean } from 'lodash';
 import React, { useCallback, useEffect, useRef } from 'react';
 import styled from "styled-components";
 import ITERABLE from '../../../iterables/iterable.json';
@@ -42,6 +43,19 @@ const Container = styled.div`
   justify-content: center;
 `
 
+type Coord = number[];
+type LandmarksValues = {
+  'chin': Coord[];
+  'left_eyebrow': Coord[];
+  'right_eyebrow': Coord[];
+  'nose_bridge': Coord[];
+  'nose_tip': Coord[];
+  'left_eye': Coord[];
+  'right_eye': Coord[];
+  'top_lip': Coord[];
+  'bottom_lip': Coord[];
+}
+
 interface IterableItem {
   src: string;
   avg_color: string;
@@ -55,7 +69,11 @@ interface IterableItem {
     norm_y: number,
     norm_width: number,
     norm_height: number
-  }
+  },
+  landmarks: {
+    values: LandmarksValues,
+    norm: LandmarksValues,
+  },
 }
 
 const ITEMS_TO_DRAW: IterableItem[] = ITERABLE.iterable;
@@ -81,6 +99,41 @@ const FOCAL_POINT_BOX = {
   // norm_height: 0.3,
 };
 
+type Landmark =
+'chin' |
+'left_eyebrow' |
+'right_eyebrow' |
+'nose_bridge' |
+'nose_tip' |
+'left_eye' |
+'right_eye' |
+'top_lip' |
+'bottom_lip';
+
+const getDrawableCenterNorm = (item: DrawableItem, landmarksToAverage?: Landmark[]) => {
+  const { face_box, landmarks } = item;
+  if (!landmarksToAverage || !landmarksToAverage.length) {
+    // normalize to face
+    return {
+      x: (face_box.norm_width / 2 + face_box.norm_x),
+      y: (face_box.norm_height / 2 + face_box.norm_y),
+    }
+  }
+  const xVals: number[] = [];
+  const yVals: number[] = [];
+  landmarksToAverage.forEach(key => {
+    const values = landmarks.norm[key]
+    values.forEach(([x, y]) => {
+      xVals.push(x)
+      yVals.push(y)
+    });
+  })
+  return {
+    x:  mean(xVals),
+    y: mean(yVals),
+  }
+};
+
 const drawItem = (ctx: CanvasRenderingContext2D, item: DrawableItem) => {
   const { image, face_box } = item;
   const canvas = ctx.canvas;
@@ -92,9 +145,10 @@ const drawItem = (ctx: CanvasRenderingContext2D, item: DrawableItem) => {
   const imgWidth = image.naturalWidth * scaleFactor;
   const imgHeight = image.naturalHeight * scaleFactor;
 
+  const drawableCenterNorm = getDrawableCenterNorm(item, ['left_eye', 'right_eye'])
   const drawableCenter = {
-    x: imgWidth * (face_box.norm_width / 2 + face_box.norm_x),
-    y: imgHeight * (face_box.norm_height / 2 + face_box.norm_y)
+    x: imgWidth * drawableCenterNorm.x,
+    y: imgHeight * drawableCenterNorm.y
   };
 
   const targetCoordCanvas = {
