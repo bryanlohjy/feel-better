@@ -31,26 +31,45 @@ def face_location_to_box(img, box: Tuple[int, int, int, int]):
     }
 
 
-def get_primary_face_box_in_url(url):
+def normalize_landmarks(img, landmarks):
+    (img_h, img_w, _) = img.shape
+    normalized = {}
+    for (key, value) in landmarks.items():
+        normalized[key] = [[coord[0] / img_w, coord[1] / img_h] for coord in value]
+    return normalized
+
+
+def get_primary_face_in_image(url):
     img = load_image_from_url(url)
     face_locations = face_recognition.api.face_locations(img)
     face_boxes = [face_location_to_box(img, location) for location in face_locations]
     if face_boxes:
         # return the largest box
         box_areas = [b["width"] * b["height"] for b in face_boxes]
-        primary_face_box = face_boxes[box_areas.index(max(box_areas))]
-        return primary_face_box
-    else:
-        return []
+        primary_face_index = box_areas.index(max(box_areas))
+        primary_face_box = face_boxes[primary_face_index]
+
+        landmarks_list = face_recognition.api.face_landmarks(img)
+        landmarks = landmarks_list[primary_face_index]
+
+        return {
+            "face_box": primary_face_box,
+            "landmarks": {
+                "norm": normalize_landmarks(img, landmarks),
+                "values": landmarks,
+            },
+        }
 
 
 def photo_to_iterable_item(photo):
     src = photo["src"]["large"]
+    face = get_primary_face_in_image(src)
     return {
         "src": src,
         "avg_color": photo["avg_color"],
         "description": photo["alt"],
-        "face_box": get_primary_face_box_in_url(src),
+        "face_box": face.get("face_box", None),
+        "landmarks": face.get("landmarks", None),
     }
 
 
