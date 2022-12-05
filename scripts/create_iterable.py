@@ -6,7 +6,8 @@ from io import BytesIO
 from pexels import search
 from typing import Tuple
 import json
-import math
+import argparse
+from tqdm import tqdm
 
 
 def load_image_from_url(url: str):
@@ -82,24 +83,54 @@ def write_json(path: str, dict):
         outfile.write(json_object)
 
 
+debug_folder_path = "scripts/debug"
+
 if __name__ == "__main__":
-    output_path = "src/iterables/iterable.json"
-    # TODO: cmd line args for query, pages, image size
+    parser = argparse.ArgumentParser()
+    # Adding optional argument
+    parser.add_argument(
+        "-q", "--query", help="Search query", default="happy portrait face"
+    )
+    parser.add_argument(
+        "-c",
+        "--count",
+        help="Amount of images to get (max of 80)",
+        default="80",
+        type=int,
+    )
+    parser.add_argument(
+        "-o",
+        "--output_path",
+        help="Output path",
+        default="src/iterables/iterable.json",
+    )
+    parser.add_argument(
+        "-d", "--debug", help="Output path", default=False, type=lambda v: bool(v)
+    )
+
+    # Read arguments from command line
+    args = parser.parse_args()
 
     # fetch data from pexels
-    results = search({"query": "happy portrait face", "per_page": 80})
+    results = search({"query": args.query, "per_page": args.count})
     photos = [photo for photo in results["photos"]]
 
     # detect face locations
-    iterable = [photo_to_iterable_item(photo) for photo in photos]
-    iterable = [i for i in iterable if i["face_box"]]
+    iterable = []
+    print("Detecting faces...")
+    for photo in tqdm(photos):
+        item = photo_to_iterable_item(photo)
+        if item["face_box"]:
+            iterable.append(item)
 
     # output
-    write_json(output_path, {"iterable": iterable})
-    print(f"Created iterable at {output_path}")
+    write_json(args.output_path, {"iterable": iterable})
+    print(f"Created iterable at {args.output_path}")
 
-    # visualize face_boxes:
-    for i, item in enumerate(iterable):
-        path = f'scripts/debug/{i}_{item["description"].lower().replace(" ", "_")}.png'
-        visualize_item(path, item)
-        print(f"Saved visualization at {path}")
+    if args.debug:
+        print("Saving debug images...")
+        # visualize face_boxes:
+        for i, item in tqdm(enumerate(iterable)):
+            path = f'{debug_folder_path}/{i}_{item["description"].lower().replace(" ", "_")}.png'
+            visualize_item(path, item)
+            print(f"Saved visualization at {path}")
